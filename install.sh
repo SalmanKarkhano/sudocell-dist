@@ -60,13 +60,13 @@ echo ""
 echo "Installing system dependencies..."
 if command -v apt-get >/dev/null 2>&1; then
   apt-get update -qq > /dev/null 2>&1 || true
-  apt-get install -y -qq python3 mysql-client postgresql-client > /dev/null 2>&1 || true
+  apt-get install -y -qq python3 mysql-client postgresql-client vsftpd openssh-server > /dev/null 2>&1 || true
   echo "[OK] Dependencies installed (Debian/Ubuntu)"
 elif command -v dnf >/dev/null 2>&1; then
-  dnf install -y -q python3 mysql postgresql > /dev/null 2>&1 || true
+  dnf install -y -q python3 mysql postgresql vsftpd openssh-server > /dev/null 2>&1 || true
   echo "[OK] Dependencies installed (Fedora/RHEL)"
 elif command -v yum >/dev/null 2>&1; then
-  yum install -y -q python3 mysql postgresql > /dev/null 2>&1 || true
+  yum install -y -q python3 mysql postgresql vsftpd openssh-server > /dev/null 2>&1 || true
   echo "[OK] Dependencies installed (CentOS/RHEL)"
 else
   echo "Warning: No supported package manager found"
@@ -128,7 +128,8 @@ try:
             email TEXT UNIQUE NOT NULL,
             password_hash TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            is_admin INTEGER DEFAULT 0
+            is_admin INTEGER DEFAULT 0,
+            system_user INTEGER DEFAULT 0
         )
     """)
 
@@ -142,13 +143,25 @@ try:
             UNIQUE(user_id, key)
         )
     """)
+    
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS websites (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            domain TEXT UNIQUE NOT NULL,
+            path TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            enabled INTEGER DEFAULT 1,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+    """)
 
-    # Create admin user
+    # Create admin user (admin only)
     password_hash = hashlib.sha256("$ADMIN_PASS".encode()).hexdigest()
     cursor.execute("""
-        INSERT OR IGNORE INTO users (username, email, password_hash, is_admin)
-        VALUES (?, ?, ?, ?)
-    """, ("$ADMIN_USER", "$ADMIN_EMAIL", password_hash, 1))
+        INSERT OR IGNORE INTO users (username, email, password_hash, is_admin, system_user)
+        VALUES (?, ?, ?, ?, ?)
+    """, ("$ADMIN_USER", "$ADMIN_EMAIL", password_hash, 1, 0))
 
     conn.commit()
     conn.close()
@@ -159,7 +172,29 @@ PYTHON
 
 echo "[OK] Admin account created"
 
-# Step 6: Configuration
+# Step 6: Setup FTP/SFTP
+echo ""
+echo "Setting up FTP/SFTP..."
+
+# Configure VSFTPD PAM
+PAM_VSFTPD="/etc/pam.d/vsftpd"
+if [ ! -f "$PAM_VSFTPD" ] && command -v vsftpd >/dev/null 2>&1; then
+  cat > "$PAM_VSFTPD" << 'PAMPAM'
+#%PAM-1.0
+auth       required     pam_unix.so obscure yescrypt
+account    required     pam_unix.so
+session    required     pam_unix.so
+PAMPAM
+  chmod 644 "$PAM_VSFTPD"
+fi
+
+# Start FTP daemon
+systemctl start vsftpd 2>/dev/null || true
+systemctl enable vsftpd 2>/dev/null || true
+
+echo "[OK] FTP/SFTP configured"
+
+# Step 7: Configuration
 echo ""
 echo "Creating configuration..."
 cat > "$ETC_DIR/sudocell.env" << EOF
@@ -168,6 +203,7 @@ ENABLE_MAIL=n
 ENABLE_BACKUPS=y
 DB_MYSQL=y
 DB_POSTGRES=y
+ENABLE_FTP=y
 INSTALLED_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EOF
 
@@ -185,7 +221,22 @@ echo ""
 echo "Starting service..."
 systemctl daemon-reload 2>/dev/null || true
 systemctl start sudocell 2>/dev/null || true
-echo "[OK] Service started"
+echo "[OK] Service started
+
+# Step 8: Post-installation setup
+echo ""
+echo "Finalizing installation..."
+
+# Ensure system groups exist for file permissions
+getent group sudocell >/dev/null 2>&1 || groupadd sudocell 2>/dev/null || true
+
+# Create template for user home directories
+mkdir -p /etc/sudocell/skel
+mkdir -p /etc/sudocell/skel/public_html
+chmod 755 /etc/sudocell/skel
+chmod 755 /etc/sudocell/skel/public_html
+
+echo "[OK] Installation finalized"
 
 # Success!
 echo ""
