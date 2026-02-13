@@ -1,37 +1,72 @@
 #!/usr/bin/env bash
-# SudoCell One-Click Installer
-# Install command: curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh | sudo bash
+# ────────────────────────────────────────────────────────────
+#   SudoCell One-Click Installer
+#   Professional Hosting Control Panel
+#   GitHub: https://github.com/SalmanKarkhano/sudocell-dist
+# ────────────────────────────────────────────────────────────
+#
+# Usage (one-liner):
+#   bash <(curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh)
+#
+# Or manually:
+#   curl -o install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh
+#   sudo bash install.sh
 
 set -euo pipefail
 
+# Color codes for pretty output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Helper functions
+log_info() { echo -e "${BLUE}ℹ${NC} $*"; }
+log_success() { echo -e "${GREEN}✓${NC} $*"; }
+log_error() { echo -e "${RED}✗${NC} $*"; }
+log_warn() { echo -e "${YELLOW}⚠${NC} $*"; }
+
+# Check root privileges
 if [[ "${EUID}" -ne 0 ]]; then
-  echo "This installer must be run as root (use sudo)."
+  log_error "This installer must be run as root"
+  echo ""
+  echo "Please run with sudo:"
+  echo "  sudo bash $0"
+  echo ""
   exit 1
 fi
 
+# Configuration
 INSTALL_DIR="/opt/sudocell"
 ETC_DIR="/etc/sudocell"
 DATA_DIR="/var/lib/sudocell"
 LOG_DIR="/var/log/sudocell"
+SERVICE_USER="sudocell"
 
+# Display header
+clear
 echo ""
-echo "=========================================="
-echo "  SudoCell One-Click Installer v0.1.2"
-echo "  Hosting Control Panel"
-echo "=========================================="
+echo -e "${BLUE}"
+echo "╔════════════════════════════════════════════════════╗"
+echo "║      SudoCell - Hosting Control Panel              ║"
+echo "║        Professional Edition Installer             ║"
+echo "╚════════════════════════════════════════════════════╝"
+echo -e "${NC}"
 echo ""
 
 # Check if already installed
 if [[ -d "$INSTALL_DIR" ]]; then
-  echo "Warning: SudoCell is already installed."
+  log_warn "SudoCell is already installed at $INSTALL_DIR"
   read -p "Do you want to reinstall? (y/n): " -r
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "Installation cancelled."
+    log_info "Installation cancelled."
     exit 0
   fi
-  echo "Cleaning up old installation..."
+  log_info "Removing old installation..."
   systemctl stop sudocell 2>/dev/null || true
   rm -rf "$INSTALL_DIR" "$DATA_DIR" "$LOG_DIR" 2>/dev/null || true
+  log_success "Old installation cleaned"
 fi
 
 # Generate random admin credentials
@@ -39,13 +74,11 @@ ADMIN_USER="admin$(openssl rand -hex 2)"
 ADMIN_PASS=$(openssl rand -base64 12)
 ADMIN_EMAIL="admin@sudocell.local"
 
-echo "=========================================="
-echo "  Installing SudoCell..."
-echo "=========================================="
+log_info "Starting SudoCell installation..."
 echo ""
 
 # Step 1: Create directories
-echo "Creating directories..."
+log_info "Creating system directories..."
 mkdir -p "$INSTALL_DIR/lib"
 mkdir -p "$ETC_DIR"
 mkdir -p "$DATA_DIR"
@@ -53,64 +86,66 @@ mkdir -p "$LOG_DIR"
 chmod 700 "$ETC_DIR"
 chmod 700 "$DATA_DIR"
 chmod 700 "$LOG_DIR"
-echo "[OK] Directories created"
+log_success "Directories created"
 
 # Step 2: Install system dependencies
 echo ""
-echo "Installing system dependencies..."
+log_info "Installing system dependencies..."
 if command -v apt-get >/dev/null 2>&1; then
   apt-get update -qq > /dev/null 2>&1 || true
-  apt-get install -y -qq python3 mysql-client postgresql-client vsftpd openssh-server > /dev/null 2>&1 || true
-  echo "[OK] Dependencies installed (Debian/Ubuntu)"
+  apt-get install -y -qq python3 python3-pip mysql-client postgresql-client vsftpd openssh-server > /dev/null 2>&1 || true
+  log_success "Dependencies installed (Debian/Ubuntu)"
 elif command -v dnf >/dev/null 2>&1; then
-  dnf install -y -q python3 mysql postgresql vsftpd openssh-server > /dev/null 2>&1 || true
-  echo "[OK] Dependencies installed (Fedora/RHEL)"
+  dnf install -y -q python3 python3-pip mysql postgresql vsftpd openssh-server > /dev/null 2>&1 || true
+  log_success "Dependencies installed (Fedora/RHEL)"
 elif command -v yum >/dev/null 2>&1; then
-  yum install -y -q python3 mysql postgresql vsftpd openssh-server > /dev/null 2>&1 || true
-  echo "[OK] Dependencies installed (CentOS/RHEL)"
+  yum install -y -q python3 python3-pip mysql postgresql vsftpd openssh-server > /dev/null 2>&1 || true
+  log_success "Dependencies installed (CentOS/RHEL)"
 else
-  echo "Warning: No supported package manager found"
+  log_warn "No supported package manager found. Please install: python3, mysql-client, postgresql-client, vsftpd, openssh-server"
 fi
 
 # Step 3: Download latest release
 echo ""
-echo "Downloading latest release..."
+log_info "Downloading latest release from GitHub..."
 
 RELEASE_INFO=$(curl -fsSL "https://api.github.com/repos/SalmanKarkhano/sudocell-dist/releases/latest" 2>/dev/null || echo '{}')
 DOWNLOAD_URL=$(echo "$RELEASE_INFO" | grep -o '"browser_download_url": "[^"]*\.deb"' | head -1 | cut -d'"' -f4)
 
 if [[ -z "$DOWNLOAD_URL" ]]; then
-  # Fallback to v0.1.2
-  DOWNLOAD_URL="https://github.com/SalmanKarkhano/sudocell-dist/releases/download/v0.1.2/sudocell_0.1.2_amd64.deb"
+  DOWNLOAD_URL="https://github.com/SalmanKarkhano/sudocell-dist/releases/download/v0.2.0/sudocell_0.2.0_amd64.deb"
+  log_warn "Using v0.2.0 as fallback"
 fi
 
 TEMP_DEB=$(mktemp)
 trap "rm -f $TEMP_DEB" EXIT
 
 if ! curl -fsSL -o "$TEMP_DEB" "$DOWNLOAD_URL"; then
-  echo "[ERROR] Failed to download package"
+  log_error "Failed to download package from $DOWNLOAD_URL"
   exit 1
 fi
 
-echo "[OK] Downloaded"
+DEB_SIZE=$(du -h "$TEMP_DEB" | cut -f1)
+log_success "Downloaded ($DEB_SIZE)"
 
 # Step 4: Install package
 echo ""
-echo "Installing package..."
+log_info "Installing SudoCell package..."
 if ! dpkg -i "$TEMP_DEB" > /dev/null 2>&1; then
-  echo "[ERROR] Installation failed"
+  log_error "Installation failed. You may need to run: sudo apt --fix-broken install"
   exit 1
 fi
-echo "[OK] Package installed"
+log_success "Package installed"
 
 # Step 5: Create admin user
 echo ""
-echo "Setting up admin account..."
+log_info "Setting up admin account..."
 python3 << PYTHON 2>/dev/null || true
 import sys
 import os
 import sqlite3
 import hashlib
+import bcrypt
 
 try:
     db_path = "$ETC_DIR/users.db"
@@ -156,8 +191,14 @@ try:
         )
     """)
 
-    # Create admin user (admin only)
-    password_hash = hashlib.sha256("$ADMIN_PASS".encode()).hexdigest()
+    # Hash password with bcrypt or fallback to PBKDF2
+    password = "$ADMIN_PASS".encode()
+    try:
+        import bcrypt as bcrypt_module
+        password_hash = bcrypt_module.hashpw(password, bcrypt_module.gensalt(12)).decode()
+    except:
+        password_hash = hashlib.pbkdf2_hmac('sha256', password, b'sudocell-salt', 100000).hex()
+
     cursor.execute("""
         INSERT OR IGNORE INTO users (username, email, password_hash, is_admin, system_user)
         VALUES (?, ?, ?, ?, ?)
@@ -166,15 +207,15 @@ try:
     conn.commit()
     conn.close()
     os.chmod(db_path, 0o600)
-except:
-    pass
+except Exception as e:
+    print(f"Warning: {e}", file=sys.stderr)
 PYTHON
 
-echo "[OK] Admin account created"
+log_success "Admin account created"
 
 # Step 6: Setup FTP/SFTP
 echo ""
-echo "Setting up FTP/SFTP..."
+log_info "Setting up FTP/SFTP..."
 
 # Configure VSFTPD PAM
 PAM_VSFTPD="/etc/pam.d/vsftpd"
@@ -192,11 +233,11 @@ fi
 systemctl start vsftpd 2>/dev/null || true
 systemctl enable vsftpd 2>/dev/null || true
 
-echo "[OK] FTP/SFTP configured"
+log_success "FTP/SFTP configured"
 
 # Step 7: Configuration
 echo ""
-echo "Creating configuration..."
+log_info "Creating configuration..."
 cat > "$ETC_DIR/sudocell.env" << EOF
 # SudoCell Configuration
 ENABLE_MAIL=n
@@ -208,24 +249,25 @@ INSTALLED_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EOF
 
 chmod 600 "$ETC_DIR/sudocell.env"
-echo "[OK] Configuration saved"
+log_success "Configuration saved"
 
 # Fix permissions for non-root access
-chmod 755 "$ETC_DIR"
+chmod 755 "$ETC_DIR" 2>/dev/null || true
 chmod 644 "$ETC_DIR/users.db" 2>/dev/null || true
-chmod 777 "$DATA_DIR"
-chmod 777 "$LOG_DIR"
+chmod 777 "$DATA_DIR" 2>/dev/null || true
+chmod 777 "$LOG_DIR" 2>/dev/null || true
 
-# Step 7: Start service
+# Step 8: Start service
 echo ""
-echo "Starting service..."
+log_info "Starting SudoCell service..."
 systemctl daemon-reload 2>/dev/null || true
 systemctl start sudocell 2>/dev/null || true
-echo "[OK] Service started"
+systemctl enable sudocell 2>/dev/null || true
+log_success "Service started and enabled"
 
-# Step 8: Post-installation setup
+# Step 9: Post-installation setup
 echo ""
-echo "Finalizing installation..."
+log_info "Finalizing installation..."
 
 # Ensure system groups exist for file permissions
 getent group sudocell >/dev/null 2>&1 || groupadd sudocell 2>/dev/null || true
@@ -236,34 +278,49 @@ mkdir -p /etc/sudocell/skel/public_html
 chmod 755 /etc/sudocell/skel
 chmod 755 /etc/sudocell/skel/public_html
 
-echo "[OK] Installation finalized"
+log_success "Installation finalized"
 
 # Success!
 echo ""
-echo "========================================"
-echo "Installation Complete!"
-echo "========================================"
+echo -e "${GREEN}"
+echo "╔════════════════════════════════════════════════════╗"
+echo "║         ✓ Installation Complete!                   ║"
+echo "║                                                    ║"
+echo "║        SudoCell is now ready to use                ║"
+echo "╚════════════════════════════════════════════════════╝"
+echo -e "${NC}"
 echo ""
 echo "Your Login Credentials:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo -e "  ${YELLOW}Username:${NC} $ADMIN_USER"
+echo -e "  ${YELLOW}Password:${NC} $ADMIN_PASS"
+echo -e "  ${YELLOW}Email:${NC}    $ADMIN_EMAIL"
 echo ""
-echo "  Username: $ADMIN_USER"
-echo "  Password: $ADMIN_PASS"
-echo "  Email:    $ADMIN_EMAIL"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "Get Started (copy & paste):"
+echo "Quick Start Guide:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "  1. Login:"
-echo "     sudocell login -u $ADMIN_USER -p \"$ADMIN_PASS\""
+echo "1. Login to SudoCell:"
+echo "   ${BLUE}sudocell login -u $ADMIN_USER -p \"\$password\"${NC}"
 echo ""
-echo "  2. Verify installation:"
-echo "     sudocell whoami"
+echo "2. Verify installation:"
+echo "   ${BLUE}sudocell whoami${NC}"
 echo ""
-echo "  3. Create a website:"
-echo "     sudocell create-website --domain example.com"
+echo "3. Create a website:"
+echo "   ${BLUE}sudocell create-website --domain example.com${NC}"
 echo ""
-echo "  4. Create a database:"
-echo "     sudocell create-db --type mysql --name myapp"
+echo "4. Create a database:"
+echo "   ${BLUE}sudocell create-db --type mysql --name myapp${NC}"
 echo ""
-echo "More info:"
-echo "     sudocell --help"
+echo "5. View help:"
+echo "   ${BLUE}sudocell --help${NC}"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo ""
+echo "📚 Documentation:"
+echo "   https://github.com/SalmanKarkhano/sudocell-dist"
+echo ""
+echo "Support:"
+echo "   https://github.com/SalmanKarkhano/sudocell-dist/issues"
 echo ""
