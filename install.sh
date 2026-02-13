@@ -18,7 +18,7 @@ mkdir -p /etc/sudocell
 mkdir -p /var/lib/sudocell
 mkdir -p /var/log/sudocell
 
-# Download from sudocell-dist repository (raw GitHub content)
+# Download from sudocell-dist repository main branch
 PACKAGE_URL="https://github.com/SalmanKarkhano/sudocell-dist/raw/main/sudocell_0.0.1_all.deb"
 TEMP_DEB=$(mktemp)
 
