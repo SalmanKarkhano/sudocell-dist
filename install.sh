@@ -221,7 +221,7 @@ echo ""
 echo "Starting service..."
 systemctl daemon-reload 2>/dev/null || true
 systemctl start sudocell 2>/dev/null || true
-echo "[OK] Service started
+echo "[OK] Service started"
 
 # Step 8: Post-installation setup
 echo ""
