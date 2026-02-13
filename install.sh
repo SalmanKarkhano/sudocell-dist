@@ -5,12 +5,22 @@
 #   GitHub: https://github.com/SalmanKarkhano/sudocell-dist
 # ────────────────────────────────────────────────────────────
 #
-# Usage (one-liner):
-#   bash <(curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh)
+# Installation Methods:
 #
-# Or manually:
-#   curl -o install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh
-#   sudo bash install.sh
+# 1. One-liner (most systems):
+#    bash <(curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh)
+#
+# 2. Two-step (most compatible):
+#    curl -o /tmp/install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh
+#    sudo bash /tmp/install.sh
+#
+# 3. Direct download:
+#    curl -o install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh
+#    sudo bash install.sh
+#
+# 4. Using wget:
+#   wget -O /tmp/install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh
+#    sudo bash /tmp/install.sh
 
 set -euo pipefail
 
