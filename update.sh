@@ -13,8 +13,8 @@ fi
 echo "🔄 Updating SudoCell..."
 echo ""
 
-# Download latest release
-RELEASE_URL="https://github.com/SalmanKarkhano/sudocell-dist/releases/download/v0.0.1/sudocell_0.0.1_all.deb"
+# Download latest release from repository
+RELEASE_URL="https://github.com/SalmanKarkhano/sudocell-dist/raw/main/sudocell_0.0.1_all.deb"
 TEMP_DEB=$(mktemp)
 
 echo "📥 Downloading latest release..."
