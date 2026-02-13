@@ -1,10 +1,4 @@
-# Binary distributions
-*.deb
-*.rpm
-*.tar.gz
-*.zip
-
-# Temporary files
+# Build artifacts (but keep distribution releases)
 *.tmp
 /tmp/
 

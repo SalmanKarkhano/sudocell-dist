@@ -18,13 +18,13 @@ mkdir -p /etc/sudocell
 mkdir -p /var/lib/sudocell
 mkdir -p /var/log/sudocell
 
-# Download latest release from main repo
-PACKAGE_URL="https://github.com/SalmanKarkhano/Sudocell/releases/download/v0.2.0/sudocell_0.2.0_all.deb"
+# Download from sudocell-dist releases
+PACKAGE_URL="https://github.com/SalmanKarkhano/sudocell-dist/releases/download/v0.0.1/sudocell_0.0.1_all.deb"
 TEMP_DEB=$(mktemp)
 
 echo "Downloading SudoCell package..."
 if ! curl -fsSL -o "$TEMP_DEB" "$PACKAGE_URL"; then
-  echo "Error: Failed to download package"
+  echo "Error: Failed to download package from $PACKAGE_URL"
   exit 1
 fi
 
