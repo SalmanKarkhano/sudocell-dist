@@ -1,66 +1,76 @@
-#!/usr/bin/env bash
-# SudoCell Update/Install Script
-# Downloads and installs the latest SudoCell release
+#!/bin/bash
+# SudoCell Update Script v0.2.0
+# Downloads and installs the latest bytecode
+# Keeps database and user data intact
 
 set -euo pipefail
 
 if [[ "${EUID}" -ne 0 ]]; then
-  echo "This installer must be run as root (use sudo)."
+  echo "❌ This script must be run as root (use sudo)"
   exit 1
 fi
-
-REPO_OWNER="SalmanKarkhano"
-REPO_NAME="sudocell-dist"
-RELEASE_API_URL="https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/latest"
-INSTALL_DIR="/opt/sudocell"
-ETC_DIR="/etc/sudocell"
-DATA_DIR="/var/lib/sudocell"
-LOG_DIR="/var/log/sudocell"
-BIN_DIR="/usr/local/bin"
-
-echo "🔄 Fetching latest SudoCell release..."
-
-# Get latest release info
-RELEASE_INFO=$(curl -fsSL "$RELEASE_API_URL")
-DOWNLOAD_URL=$(echo "$RELEASE_INFO" | grep -o '"browser_download_url": "[^"]*\.deb"' | head -1 | cut -d'"' -f4)
-VERSION=$(echo "$RELEASE_INFO" | grep -o '"tag_name": "[^"]*"' | head -1 | cut -d'"' -f4)
-
-if [[ -z "$DOWNLOAD_URL" ]]; then
-  echo "❌ Failed to fetch latest release. Check internet connection."
-  exit 1
-fi
-
-echo "✓ Found version: $VERSION"
-echo "📦 Downloading: $DOWNLOAD_URL"
-
-# Download to temp directory
-TEMP_DEB=$(mktemp)
-trap "rm -f $TEMP_DEB" EXIT
-
-if ! curl -fsSL -o "$TEMP_DEB" "$DOWNLOAD_URL"; then
-  echo "❌ Failed to download release."
-  exit 1
-fi
-
-echo "✓ Download complete"
-echo "📝 Installing..."
-
-# Stop service before upgrade
-if systemctl is-active --quiet sudocell; then
-  echo "  Stopping sudocell service..."
-  systemctl stop sudocell
-fi
-
-# Install the .deb
-if ! dpkg -i "$TEMP_DEB"; then
-  echo "❌ Installation failed."
-  exit 1
-fi
-
-echo "✅ SudoCell updated to $VERSION"
-echo "🔃 Starting sudocell service..."
-systemctl start sudocell
-systemctl status sudocell
 
 echo ""
-echo "✨ Update complete! Run 'sudocell --help' to verify."
+echo "=========================================="
+echo "  SudoCell Update v0.2.0"
+echo "=========================================="
+echo ""
+
+LIB_DIR="/opt/sudocell/lib"
+REPO="https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main"
+
+# Array of bytecode files to update (v0.2.0)
+FILES=(
+  "sudocell_cli.cpython-310.pyc"
+  "sudocell_auth.cpython-310.pyc"
+  "sudocell_core.cpython-310.pyc"
+  "sudocell_ftp.cpython-310.pyc"
+  "feature_static_website.cpython-310.pyc"
+  "feature_database_creator.cpython-310.pyc"
+)
+
+# Verify installation exists
+if [[ ! -d "$LIB_DIR" ]]; then
+  echo "❌ SudoCell is not installed. Run:"
+  echo "   curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh | sudo bash"
+  exit 1
+fi
+
+# Backup old files
+echo "📦 Backing up current installation..."
+mkdir -p "$LIB_DIR/.backup"
+cp "$LIB_DIR"/*.pyc "$LIB_DIR/.backup/" 2>/dev/null || true
+
+# Download and install new bytecode
+echo "📥 Downloading latest bytecode..."
+FAILED=0
+for file in "${FILES[@]}"; do
+  if curl -fsSL -o "$LIB_DIR/$file" "$REPO/$file" 2>/dev/null; then
+    echo "  ✓ $file"
+  else
+    echo "  ✗ $file (failed)"
+    FAILED=1
+  fi
+done
+
+if [[ $FAILED -eq 1 ]]; then
+  echo ""
+  echo "⚠️ Some files failed to download. Restoring backup..."
+  rm -f "$LIB_DIR"/*.pyc
+  cp "$LIB_DIR/.backup"/*.pyc "$LIB_DIR/" 2>/dev/null || true
+  echo "❌ Update failed. Original installation restored."
+  exit 1
+fi
+
+# Fix permissions
+chmod 644 "$LIB_DIR"/*.pyc
+
+echo ""
+echo "✅ Update complete!"
+echo ""
+echo "New version:"
+sudocell version
+echo ""
+echo "Test with:"
+echo "  sudo sudocell login -u admin<XXXX> -p <PASSWORD>"
+echo "  sudo sudocell list-users"
