@@ -14,23 +14,16 @@ ETC_DIR="/etc/sudocell"
 DATA_DIR="/var/lib/sudocell"
 LOG_DIR="/var/log/sudocell"
 
-# Color codes
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
-
 echo ""
-echo -e "${BLUE}╔════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║  🚀 SudoCell One-Click Installer v0.1.2  ║${NC}"
-echo -e "${BLUE}║     Hosting Control Panel              ║${NC}"
-echo -e "${BLUE}╚════════════════════════════════════════╝${NC}"
+echo "=========================================="
+echo "  SudoCell One-Click Installer v0.1.2"
+echo "  Hosting Control Panel"
+echo "=========================================="
 echo ""
 
 # Check if already installed
 if [[ -d "$INSTALL_DIR" ]]; then
-  echo -e "${YELLOW}⚠️  SudoCell is already installed.${NC}"
+  echo "Warning: SudoCell is already installed."
   read -p "Do you want to reinstall? (y/n): " -r
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo "Installation cancelled."
@@ -46,13 +39,13 @@ ADMIN_USER="admin$(openssl rand -hex 2)"
 ADMIN_PASS=$(openssl rand -base64 12)
 ADMIN_EMAIL="admin@sudocell.local"
 
-echo -e "${BLUE}════════════════════════════════════════${NC}"
-echo -e "${BLUE}  📦 Installing SudoCell...${NC}"
-echo -e "${BLUE}════════════════════════════════════════${NC}"
+echo "=========================================="
+echo "  Installing SudoCell..."
+echo "=========================================="
 echo ""
 
 # Step 1: Create directories
-echo -e "${BLUE}📁 Creating directories...${NC}"
+echo "Creating directories..."
 mkdir -p "$INSTALL_DIR/lib"
 mkdir -p "$ETC_DIR"
 mkdir -p "$DATA_DIR"
@@ -60,28 +53,28 @@ mkdir -p "$LOG_DIR"
 chmod 700 "$ETC_DIR"
 chmod 700 "$DATA_DIR"
 chmod 700 "$LOG_DIR"
-echo -e "${GREEN}✓${NC} Directories created"
+echo "[OK] Directories created"
 
 # Step 2: Install system dependencies
 echo ""
-echo -e "${BLUE}📚 Installing system dependencies...${NC}"
+echo "Installing system dependencies..."
 if command -v apt-get >/dev/null 2>&1; then
   apt-get update -qq > /dev/null 2>&1 || true
   apt-get install -y -qq python3 mysql-client postgresql-client > /dev/null 2>&1 || true
-  echo -e "${GREEN}✓${NC} Dependencies installed (Debian/Ubuntu)"
+  echo "[OK] Dependencies installed (Debian/Ubuntu)"
 elif command -v dnf >/dev/null 2>&1; then
   dnf install -y -q python3 mysql postgresql > /dev/null 2>&1 || true
-  echo -e "${GREEN}✓${NC} Dependencies installed (Fedora/RHEL)"
+  echo "[OK] Dependencies installed (Fedora/RHEL)"
 elif command -v yum >/dev/null 2>&1; then
   yum install -y -q python3 mysql postgresql > /dev/null 2>&1 || true
-  echo -e "${GREEN}✓${NC} Dependencies installed (CentOS/RHEL)"
+  echo "[OK] Dependencies installed (CentOS/RHEL)"
 else
-  echo -e "${YELLOW}⚠️  No supported package manager found${NC}"
+  echo "Warning: No supported package manager found"
 fi
 
 # Step 3: Download latest release
 echo ""
-echo -e "${BLUE}⬇️  Downloading latest release...${NC}"
+echo "Downloading latest release..."
 
 RELEASE_INFO=$(curl -fsSL "https://api.github.com/repos/SalmanKarkhano/sudocell-dist/releases/latest" 2>/dev/null || echo '{}')
 DOWNLOAD_URL=$(echo "$RELEASE_INFO" | grep -o '"browser_download_url": "[^"]*\.deb"' | head -1 | cut -d'"' -f4)
@@ -95,24 +88,24 @@ TEMP_DEB=$(mktemp)
 trap "rm -f $TEMP_DEB" EXIT
 
 if ! curl -fsSL -o "$TEMP_DEB" "$DOWNLOAD_URL"; then
-  echo -e "${RED}❌ Failed to download package${NC}"
+  echo "[ERROR] Failed to download package"
   exit 1
 fi
 
-echo -e "${GREEN}✓${NC} Downloaded"
+echo "[OK] Downloaded"
 
 # Step 4: Install package
 echo ""
-echo -e "${BLUE}📦 Installing package...${NC}"
+echo "Installing package..."
 if ! dpkg -i "$TEMP_DEB" > /dev/null 2>&1; then
-  echo -e "${RED}❌ Installation failed${NC}"
+  echo "[ERROR] Installation failed"
   exit 1
 fi
-echo -e "${GREEN}✓${NC} Package installed"
+echo "[OK] Package installed"
 
 # Step 5: Create admin user
 echo ""
-echo -e "${BLUE}🔐 Setting up admin account...${NC}"
+echo "Setting up admin account..."
 python3 << PYTHON 2>/dev/null || true
 import sys
 import os
@@ -164,11 +157,11 @@ except:
     pass
 PYTHON
 
-echo -e "${GREEN}✓${NC} Admin account created"
+echo "[OK] Admin account created"
 
 # Step 6: Configuration
 echo ""
-echo -e "${BLUE}⚙️  Creating configuration...${NC}"
+echo "Creating configuration..."
 cat > "$ETC_DIR/sudocell.env" << EOF
 # SudoCell Configuration
 ENABLE_MAIL=n
@@ -179,7 +172,7 @@ INSTALLED_DATE=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 EOF
 
 chmod 600 "$ETC_DIR/sudocell.env"
-echo -e "${GREEN}✓${NC} Configuration saved
+echo "[OK] Configuration saved"
 
 # Fix permissions for non-root access
 chmod 755 "$ETC_DIR"
@@ -189,37 +182,37 @@ chmod 777 "$LOG_DIR"
 
 # Step 7: Start service
 echo ""
-echo -e "${BLUE}🚀 Starting service...${NC}"
+echo "Starting service..."
 systemctl daemon-reload 2>/dev/null || true
 systemctl start sudocell 2>/dev/null || true
-echo -e "${GREEN}✓${NC} Service started"
+echo "[OK] Service started"
 
 # Success!
 echo ""
-echo -e "${BLUE}════════════════════════════════════════${NC}"
-echo -e "${GREEN}✅ Installation Complete!${NC}"
-echo -e "${BLUE}════════════════════════════════════════${NC}"
+echo "========================================"
+echo "Installation Complete!"
+echo "========================================"
 echo ""
-echo -e "${YELLOW}📋 Your Login Credentials:${NC}"
+echo "Your Login Credentials:"
 echo ""
-echo -e "  ${BLUE}Username:${NC} ${GREEN}$ADMIN_USER${NC}"
-echo -e "  ${BLUE}Password:${NC} ${GREEN}$ADMIN_PASS${NC}"
-echo -e "  ${BLUE}Email:${NC}    ${GREEN}$ADMIN_EMAIL${NC}"
+echo "  Username: $ADMIN_USER"
+echo "  Password: $ADMIN_PASS"
+echo "  Email:    $ADMIN_EMAIL"
 echo ""
-echo -e "${YELLOW}🚀 Get Started (copy & paste):${NC}"
+echo "Get Started (copy & paste):"
 echo ""
-echo -e "  ${BLUE}1. Login:${NC}"
+echo "  1. Login:"
 echo "     sudocell login -u $ADMIN_USER -p \"$ADMIN_PASS\""
 echo ""
-echo -e "  ${BLUE}2. Verify installation:${NC}"
+echo "  2. Verify installation:"
 echo "     sudocell whoami"
 echo ""
-echo -e "  ${BLUE}3. Create a website:${NC}"
+echo "  3. Create a website:"
 echo "     sudocell create-website --domain example.com"
 echo ""
-echo -e "  ${BLUE}4. Create a database:${NC}"
+echo "  4. Create a database:"
 echo "     sudocell create-db --type mysql --name myapp"
 echo ""
-echo -e "${YELLOW}📖 More info:${NC}"
+echo "More info:"
 echo "     sudocell --help"
 echo ""
