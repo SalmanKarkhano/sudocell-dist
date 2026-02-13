@@ -7,20 +7,19 @@
 #
 # Installation Methods:
 #
-# 1. One-liner (most systems):
+# 1. Piped Installation (RECOMMENDED - Most Compatible):
+#    curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh | sudo bash
+#
+# 2. One-liner (Process substitution):
 #    bash <(curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh)
 #
-# 2. Two-step (most compatible):
+# 3. Two-step (Manual download):
 #    curl -o /tmp/install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh
 #    sudo bash /tmp/install.sh
 #
-# 3. Direct download:
-#    curl -o install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh
-#    sudo bash install.sh
-#
-# 4. Using wget:
-#   wget -O /tmp/install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh
-#    sudo bash /tmp/install.sh
+# 4. Direct .deb installation:
+#    curl -o /tmp/sudocell_0.2.0_all.deb https://github.com/SalmanKarkhano/sudocell-dist/raw/main/sudocell_0.2.0_all.deb
+#    sudo dpkg -i /tmp/sudocell_0.2.0_all.deb
 
 set -euo pipefail
 

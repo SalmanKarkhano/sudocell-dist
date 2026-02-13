@@ -10,15 +10,23 @@
 
 ## ⚡ Quick Start
 
-### One-Liner Installation (Recommended for most systems)
+### Method 1: Piped Installation (Recommended - Most Compatible)
+
+This is the traditional and most reliable method:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh | sudo bash
+```
+
+### Method 2: One-Liner Installation (Alternative)
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh)
 ```
 
-### Alternative Method 1: Two-Step Installation (Most Compatible)
+### Method 3: Two-Step Installation
 
-If the one-liner fails, use this method instead:
+If piping doesn't work on your system:
 
 ```bash
 # Step 1: Download the installer
@@ -28,7 +36,7 @@ curl -o /tmp/install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocel
 sudo bash /tmp/install.sh
 ```
 
-### Alternative Method 2: Direct .deb Installation
+### Method 4: Direct .deb Installation
 
 Install the package directly without running the full installer:
 
@@ -43,16 +51,18 @@ sudo dpkg -i /tmp/sudocell_0.2.0_all.deb
 sudo apt --fix-broken install
 ```
 
-### Alternative Method 3: Using wget
+### Method 5: Using wget
 
-If you prefer `wget` or curl has issues:
+If you prefer `wget`:
 
 ```bash
-# Download the installer
-wget -O /tmp/install.sh https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh
+curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh | bash
+```
 
-# Run as root
-sudo bash /tmp/install.sh
+Or with sudo:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SalmanKarkhano/sudocell-dist/main/install.sh | sudo bash
 ```
 
 ---
