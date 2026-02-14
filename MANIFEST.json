@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "build_date": "20260214_163147",
+  "files": {
+    "sudocell-0.2.0-install.sh": {
+      "size_mb": 0.01,
+      "created": "2026-02-14T16:32:32.355347"
+    },
+    "sudocell-0.2.0-linux-x86_64": {
+      "size_mb": 20.35,
+      "created": "2026-02-14T16:32:30.591331"
+    },
+    "MANIFEST.json": {
+      "size_mb": 0.0,
+      "created": "2026-02-14T16:31:36.434852"
+    }
+  },
+  "install_methods": {
+    "shell": "sudo bash sudocell-*-install.sh"
+  }
+}
